@@ -165,12 +165,15 @@ class VoidService : Service() {
             val extra = json.optJSONObject("extra")
 
             // Handle backend-side state changes
+            val action = json.optString("action", "")
+            if (action == "konversation") {
+                convMode = !convMode
+                updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
+            }
             extra?.let {
-                if (it.optBoolean("toggle_conv", false)) {
+                if (it.optBoolean("toggle_conv", false) && action != "konversation") {
                     convMode = !convMode
-                    updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
                 }
-                if (it.has("preview")) { /* preview state tracked by backend */ }
             }
 
             if (b64.isNotEmpty()) {
