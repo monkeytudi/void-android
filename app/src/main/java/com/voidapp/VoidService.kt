@@ -211,14 +211,24 @@ class VoidService : Service() {
     }
 
     private fun buildNotif(text: String): Notification {
-        val intent = PendingIntent.getActivity(this, 0,
+        val openIntent = PendingIntent.getActivity(this, 0,
             Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+
+        // Notification button: tap to toggle recording
+        val toggleIntent = PendingIntent.getBroadcast(
+            this, 1,
+            Intent(this, NotifButtonReceiver::class.java).apply { action = "TOGGLE" },
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val btnLabel = if (isRecording) "⏹ Stopp" else "🎙 Sprechen"
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Void")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentIntent(intent)
+            .setContentIntent(openIntent)
             .setOngoing(true)
+            .addAction(android.R.drawable.ic_btn_speak_now, btnLabel, toggleIntent)
             .build()
     }
 

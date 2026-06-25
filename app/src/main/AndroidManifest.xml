@@ -10,7 +10,7 @@
     <application
         android:allowBackup="false"
         android:label="Void"
-        android:theme="@style/Theme.Void"
+        android:theme="@style/Theme.Void">
 
         <activity
             android:name=".MainActivity"
@@ -27,7 +27,6 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
-        <!-- Intercepts headphone media buttons -->
         <receiver
             android:name=".MediaButtonReceiver"
             android:exported="true">
@@ -36,7 +35,10 @@
             </intent-filter>
         </receiver>
 
-        <!-- Auto-start on boot -->
+        <receiver
+            android:name=".NotifButtonReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".BootReceiver"
             android:exported="true">
