@@ -193,14 +193,9 @@ class VoidService : Service() {
     }
 
     private fun speakTTS(text: String) {
-        setState(VoidState.SPEAKING)
-        val tts = android.speech.tts.TextToSpeech(this) { status ->
-            if (status == android.speech.tts.TextToSpeech.SUCCESS) {
-                val t = android.speech.tts.TextToSpeech(this) {}
-            }
-        }
-        // Minimal TTS fallback — backend should always return audio
+        // Backend always returns audio — this is only reached if audio field is empty
         setState(if (convMode) VoidState.CONV else VoidState.IDLE)
+        updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
