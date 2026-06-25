@@ -11,7 +11,7 @@
         android:allowBackup="false"
         android:label="Void"
         android:theme="@style/Theme.Void"
-        android:icon="@drawable/ic_orb">
+        android:icon="@android:drawable/sym_action_chat">
 
         <activity
             android:name=".MainActivity"
