@@ -5,9 +5,11 @@ import android.content.*
 import android.media.*
 import android.media.session.MediaSession
 import android.os.*
+import android.speech.tts.TextToSpeech
 import android.view.KeyEvent
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import java.util.Locale
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -34,6 +36,8 @@ class VoidService : Service() {
     private val recordBuf = ByteArrayOutputStream()
     private var isRecording = false
 
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
     private var mediaSession: MediaSession? = null
     private val http = OkHttpClient.Builder()
         .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
@@ -49,6 +53,12 @@ class VoidService : Service() {
         startForeground(NOTIF_ID, buildNotif("Void ist aktiv — Kopfhörer-Taste drücken"))
         loadPrefs()
         setupMediaSession()
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts?.language = Locale.GERMAN
+                ttsReady = true
+            }
+        }
     }
 
     private fun loadPrefs() {
@@ -194,9 +204,18 @@ class VoidService : Service() {
     }
 
     private fun speakTTS(text: String) {
-        // Backend always returns audio — this is only reached if audio field is empty
-        setState(if (convMode) VoidState.CONV else VoidState.IDLE)
-        updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
+        setState(VoidState.SPEAKING)
+        updateNotif("Void spricht…")
+        if (ttsReady && tts != null) {
+            tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, "void_tts")
+            Handler(Looper.getMainLooper()).postDelayed({
+                setState(if (convMode) VoidState.CONV else VoidState.IDLE)
+                updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
+            }, (text.length * 60L).coerceAtLeast(1500L))
+        } else {
+            setState(if (convMode) VoidState.CONV else VoidState.IDLE)
+            updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -240,7 +259,7 @@ class VoidService : Service() {
 
     override fun onBind(i: Intent): IBinder = binder
     override fun onStartCommand(i: Intent?, f: Int, id: Int) = START_STICKY
-    override fun onDestroy() { mediaSession?.release(); http.dispatcher.executorService.shutdown() }
+    override fun onDestroy() { mediaSession?.release(); tts?.shutdown(); http.dispatcher.executorService.shutdown() }
 }
 
 // Minimal binary writer helper
