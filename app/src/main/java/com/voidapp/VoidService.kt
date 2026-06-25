@@ -159,9 +159,19 @@ class VoidService : Service() {
                 setState(VoidState.ERROR); updateNotif("Fehler vom Server"); return
             }
 
-            val json = JSONObject(resp.body!!.string())
-            val b64  = json.optString("audio", "")
-            val text = json.optString("response", "")
+            val json  = JSONObject(resp.body!!.string())
+            val b64   = json.optString("audio", "")
+            val text  = json.optString("response", "")
+            val extra = json.optJSONObject("extra")
+
+            // Handle backend-side state changes
+            extra?.let {
+                if (it.optBoolean("toggle_conv", false)) {
+                    convMode = !convMode
+                    updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
+                }
+                if (it.has("preview")) { /* preview state tracked by backend */ }
+            }
 
             if (b64.isNotEmpty()) {
                 val mp3 = android.util.Base64.decode(b64, android.util.Base64.DEFAULT)
@@ -169,7 +179,7 @@ class VoidService : Service() {
             } else if (text.isNotEmpty()) {
                 speakTTS(text)
             } else {
-                setState(if (convMode) VoidState.CONV else VoidState.IDLE)
+                afterSpeak()
             }
         } catch (e: Exception) {
             Log.e("Void", "API error", e)
@@ -194,12 +204,20 @@ class VoidService : Service() {
                 start()
                 setOnCompletionListener {
                     it.release(); tmp.delete()
-                    setState(if (convMode) VoidState.CONV else VoidState.IDLE)
-                    updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
+                    afterSpeak()
                 }
             }
         } catch (e: Exception) {
             setState(VoidState.ERROR)
+        }
+    }
+
+    private fun afterSpeak() {
+        if (convMode) {
+            Handler(Looper.getMainLooper()).postDelayed({ startRecording() }, 600L)
+        } else {
+            setState(VoidState.IDLE)
+            updateNotif("Void ist aktiv — Kopfhörer-Taste drücken")
         }
     }
 
@@ -209,12 +227,10 @@ class VoidService : Service() {
         if (ttsReady && tts != null) {
             tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, "void_tts")
             Handler(Looper.getMainLooper()).postDelayed({
-                setState(if (convMode) VoidState.CONV else VoidState.IDLE)
-                updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
+                afterSpeak()
             }, (text.length * 60L).coerceAtLeast(1500L))
         } else {
-            setState(if (convMode) VoidState.CONV else VoidState.IDLE)
-            updateNotif(if (convMode) "Konversationsmodus aktiv" else "Void ist aktiv")
+            afterSpeak()
         }
     }
 
